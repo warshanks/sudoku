@@ -30,7 +30,7 @@
 
 // Indicators for unknown cells and displaying unknown cells
 #define UNK   -1
-#define UNK_C '?'
+#define UNK_C ' '
 
 // Directions for moving the cursor
 #define UP    1
@@ -52,6 +52,7 @@ extern int grid[ROWS][COLS];
 extern int unk_grid[ROWS][COLS];
 extern int solved[ROWS][COLS];
 extern int altered_sudoku;
+extern int sudoku_completed;
 
 /* --------------------------------------------------------- */
 /* Colors */

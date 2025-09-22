@@ -39,3 +39,11 @@ void die(const char* fmt, ...) {
     va_end(va);
     exit(1);
 }
+
+int grids_equal(int* a, int* b) {
+    for (int y = 0; y < ROWS; y++)
+        for (int x = 0; x < COLS; x++)
+            if (a[COLS * y + x] != b[COLS * y + x])
+                return 0;
+    return 1;
+}

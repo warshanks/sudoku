@@ -4,6 +4,39 @@
 #include "globals.h"
 #include "sudoku.h"    // For valid_pos
 
+// Simple solved animation: flash the border and print a message
+void show_solved_animation(void) {
+    for (int i = 0; i < 3; i++) {
+        // Flash bold border color
+        move(YP + ROWS * 2 + 1, XP);
+        BOLD_ON();
+        USE_COL(BOLD);
+        for (int x = 0; x < COLS; x++)
+            printw("+===");
+        printw("+");
+        BOLD_OFF();
+        USE_COL(NORM);
+
+        REFRESH_0();
+        napms(120);
+
+        // Clear underline
+        move(YP + ROWS * 2 + 1, XP);
+        for (int x = 0; x < COLS; x++)
+            printw("+---");
+        printw("+");
+        REFRESH_0();
+        napms(120);
+    }
+
+    BOLD_ON();
+    USE_COL(SOFT);
+    mvprintw(MSG_POS + 1, XP, "Sudoku solved! Nice job.");
+    BOLD_OFF();
+    USE_COL(NORM);
+    REFRESH_0();
+}
+
 // See src/solver/sudoku.c
 void print_sudoku(int* arr, int* unk_arr) {
     move(YP, XP);

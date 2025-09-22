@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>    // For tolower()
+#include <time.h>     // For time()
 #include <ncurses.h>
 
 #include "globals.h"
@@ -15,8 +16,12 @@ int grid[ROWS][COLS];
 int unk_grid[ROWS][COLS];
 int solved[ROWS][COLS];
 int altered_sudoku = 0;
+int sudoku_completed = 0;
 
 int main(int argc, char** argv) {
+    // Seed RNG once
+    srand((unsigned int)time(NULL));
+
     initscr();               // Init ncurses
     raw();                   // Scan input without pressing enter
     noecho();                // Don't print when typing
@@ -57,7 +62,7 @@ int main(int argc, char** argv) {
     init_pair(BOLD, COLOR_BLUE, COLOR_BLACK);
     init_pair(SOFT, COLOR_GREEN, COLOR_BLACK);
     init_pair(FCOL, COLOR_RED, COLOR_BLACK);
-    init_pair(NFCOL, COLOR_BLACK, COLOR_BLACK);
+    init_pair(NFCOL, COLOR_YELLOW, COLOR_BLACK);
 #endif
 
     // Initialize grids to UNK
@@ -73,6 +78,7 @@ int main(int argc, char** argv) {
 
     // Generate a valid sudoku
     generate_sudoku(difficulty);
+    sudoku_completed = 0;
 
     // Clear line after generating
     if (difficulty > MIN_LOADING_DIFICULTY) {
@@ -93,8 +99,8 @@ int main(int argc, char** argv) {
     // Show keybinds before the main loop
     SHOW_HELP_TITLE("Keybinds:");
     SHOW_HELP(0, "Arrows", "Move through the sudoku");
-    SHOW_HELP(1, "hjkl", "Move through the sudoku");
-    SHOW_HELP(2, "1-9", "Change state of unknown cell");
+    SHOW_HELP(1, "1-9", "Change state of unknown cell");
+    SHOW_HELP(2, "h", "Hint: solve a random unknown cell");
     SHOW_HELP(3, "s", "Solve the sudoku in the current state");
     SHOW_HELP(4, "g", "Generate a new sudoku");
     SHOW_HELP(5, "q", "Quit");
@@ -119,6 +125,7 @@ int main(int argc, char** argv) {
                 }
 
                 generate_sudoku(difficulty);
+                sudoku_completed = 0;
 
                 // Update unknown positions
                 get_unk(&grid[0][0], &unk_grid[0][0]);
@@ -131,6 +138,47 @@ int main(int argc, char** argv) {
                     OUTPUT_MSG("Finished generating sudoku");
 
                 break;
+            case 'h': {
+                // Recompute solution if the sudoku has been altered since last solve
+                if (altered_sudoku) {
+                    if (!solve(&grid[0][0], &solved[0][0])) {
+                        OUTPUT_MSG("Current sudoku can't be solved!");
+                        break;
+                    }
+                }
+
+                // Collect unknown cells
+                int candidates[ROWS * COLS];
+                int cand_count = 0;
+                for (int y = 0; y < ROWS; y++) {
+                    for (int x = 0; x < COLS; x++) {
+                        if (grid[y][x] == UNK) {
+                            candidates[cand_count++] = y * COLS + x;
+                        }
+                    }
+                }
+
+                if (cand_count == 0) {
+                    OUTPUT_MSG("No unknown cells left.");
+                    break;
+                }
+
+                int pick = candidates[rand() % cand_count];
+                int py = pick / COLS;
+                int px = pick % COLS;
+
+                grid[py][px] = solved[py][px];
+                altered_sudoku = 1;
+
+                if (!sudoku_completed && grids_equal(&grid[0][0], &solved[0][0])) {
+                    sudoku_completed = 1;
+                    show_solved_animation();
+                } else {
+                    OUTPUT_MSG("Hint placed at (y%d, x%d).", py, px);
+                }
+
+                break;
+            }
             case 's':
                 // If we altered the sudoku since we generated it (solved array is
                 // not valid), solve it again.
@@ -166,20 +214,20 @@ int main(int argc, char** argv) {
             case '8':
             case '9':
                 write_cell(&cursor_y, &cursor_x, &grid[0][0], &unk_grid[0][0], c);
+                if (!sudoku_completed && grids_equal(&grid[0][0], &solved[0][0])) {
+                    sudoku_completed = 1;
+                    show_solved_animation();
+                }
                 break;
-            case 'k':
             case KEY_UARROW:
                 move_cursor(&cursor_y, &cursor_x, &unk_grid[0][0], UP);
                 break;
-            case 'j':
             case KEY_DARROW:
                 move_cursor(&cursor_y, &cursor_x, &unk_grid[0][0], DOWN);
                 break;
-            case 'h':
             case KEY_LARROW:
                 move_cursor(&cursor_y, &cursor_x, &unk_grid[0][0], LEFT);
                 break;
-            case 'l':
             case KEY_RARROW:
                 move_cursor(&cursor_y, &cursor_x, &unk_grid[0][0], RIGHT);
                 break;

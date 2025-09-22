@@ -6,6 +6,50 @@
 #include "misc.h"
 #include "sudoku.h"
 
+// ---------------------------------------------------------
+// Local helpers for fast generation
+
+// Fisher–Yates shuffle for integer arrays
+static void shuffle_array(int* array, int length) {
+    for (int i = length - 1; i > 0; i--) {
+        int j = rand() % (i + 1);
+        int tmp = array[i];
+        array[i] = array[j];
+        array[j] = tmp;
+    }
+}
+
+// Find next empty cell (UNK). Returns linear index or -1 if none
+static int find_empty_cell(int* arr) {
+    for (int y = 0; y < ROWS; y++)
+        for (int x = 0; x < COLS; x++)
+            if (arr[COLS * y + x] == UNK)
+                return COLS * y + x;
+    return -1;
+}
+
+// Recursive randomized backtracking fill for a full valid grid
+static int backtrack_fill(int* arr) {
+    int idx = find_empty_cell(arr);
+    if (idx == -1)
+        return 1; // filled
+
+    int numbers[9] = { 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+    shuffle_array(numbers, 9);
+
+    for (int i = 0; i < 9; i++) {
+        int n = numbers[i];
+        if (valid_pos(arr, idx, n)) {
+            arr[idx] = n;
+            if (backtrack_fill(arr))
+                return 1;
+            arr[idx] = UNK;
+        }
+    }
+
+    return 0;
+}
+
 /*
 do {
     filled = 0;
@@ -18,46 +62,30 @@ do {
 Where difficulty is the parameter and indicates the number of cells to be filled.
 */
 void generate_sudoku(int difficulty) {
-    // Only used to make the srand() seed more random
-    int global_c = 0;
+    // 1) Build a full valid solved grid via randomized backtracking
+    init_grid(solved);
+    if (!backtrack_fill(&solved[0][0])) {
+        // Extremely unlikely; reset and try once more
+        init_grid(solved);
+        (void)backtrack_fill(&solved[0][0]);
+    }
 
-    // Generate until the sudoku can be solved
-    do {
-        int filled_c = 0;
-        int total_c  = 0;
+    // 2) Start visible grid from the solved grid
+    copy_grid(&solved[0][0], &grid[0][0]);
 
-        // Seed for rand()
-        srand(time(NULL) + global_c);
+    // 3) Remove cells to match requested number of clues (difficulty)
+    int positions[ROWS * COLS];
+    for (int i = 0; i < ROWS * COLS; i++)
+        positions[i] = i;
+    shuffle_array(positions, ROWS * COLS);
 
-        // Set grid to UNK
-        init_grid(grid);
-
-        /*
-         * Generate valid numbers at random positions until we filled enough. If we
-         * tried too many times (we can't get a valid sudoku for the current
-         * difficulty with the current tries), try an entirely new sudoku. Probably
-         * not the best method but necesary since we are bruteforcing, after all.
-         */
-        while (filled_c < difficulty && total_c < MAX_DIFFICULTY_TRIES) {
-            int rand_p = rand() % (ROWS * COLS);
-            int rand_n = (rand() % 9) + 1;    // 0-8 -> 1-9
-
-            // Get x and y from idx
-            int yp, xp;
-            idx2yx(rand_p, &yp, &xp);
-
-            // If we can put the random number in the rand position and its empty
-            if (grid[yp][xp] == UNK && valid_pos(&grid[0][0], rand_p, rand_n)) {
-                grid[yp][xp] = rand_n;
-
-                // Count how many we actually filled.
-                filled_c++;
-            }
-
-            total_c++;
-            global_c++;
-        }
-    } while (!solve(&grid[0][0], &solved[0][0]));
+    int cells_to_remove = ROWS * COLS - difficulty;
+    for (int i = 0; i < cells_to_remove; i++) {
+        int idx = positions[i];
+        int y = idx / COLS;
+        int x = idx % COLS;
+        grid[y][x] = UNK;
+    }
 
     // The new sudoku has not been altered for now
     altered_sudoku = 0;
