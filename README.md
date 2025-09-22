@@ -1,11 +1,14 @@
 # Sudoku
+
 **Simple sudoku for the terminal using ncurses and written in C.**
 
 ![ss1](./images/unsolved.png)
 ![ss2](./images/solved.png)
 
 ### Building
+
 Simply run:
+
 ```bash
 git clone https://github.com/warshanks/sudoku
 cd sudoku
@@ -34,7 +37,9 @@ If you don't want the **solver** program to show colors (for example for some wi
 ```
 
 ### Playing the game
+
 Simply run:
+
 ```console
 $ ./sudoku.out --help
 Usage:
@@ -43,7 +48,9 @@ Usage:
 ```
 
 ### Using the solver
+
 The solver program will try to read from the filename specified as argument, or stdin if none. The program checks if stdin is a piped file or command output (only on linux) and prints the usage if not.
+
 ```console
 $ ./solver.out filename.txt
 ...
